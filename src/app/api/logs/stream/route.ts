@@ -4,12 +4,13 @@
  */
 import { NextRequest } from 'next/server';
 import { spawn } from 'child_process';
+import { OPENCLAW_GATEWAY_SERVICE, PM2_SERVICES, SYSTEMD_SERVICES } from '@/lib/runtime-config';
 
-const ALLOWED_SERVICES = ['mission-control', 'classvault', 'content-vault', 'postiz-simple', 'brain', 'openclaw-gateway'];
+const ALLOWED_SERVICES = [...new Set([...SYSTEMD_SERVICES, ...PM2_SERVICES, OPENCLAW_GATEWAY_SERVICE])];
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const service = searchParams.get('service') || 'mission-control';
+  const service = searchParams.get('service') || SYSTEMD_SERVICES[0] || OPENCLAW_GATEWAY_SERVICE;
   const backend = searchParams.get('backend') || 'systemd';
 
   if (!ALLOWED_SERVICES.includes(service)) {

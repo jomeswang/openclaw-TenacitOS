@@ -8,10 +8,22 @@ import {
   getDailyCost,
   getHourlyCost,
 } from "@/lib/usage-queries";
+import { collectUsage } from "@/lib/usage-collector";
 import path from "path";
+import fs from "fs";
 
 const DB_PATH = path.join(process.cwd(), "data", "usage-tracking.db");
 const DEFAULT_BUDGET = 100.0; // Default budget in USD
+
+function dbIsFresh(dbPath: string): boolean {
+  try {
+    if (!fs.existsSync(dbPath)) return false;
+    const stat = fs.statSync(dbPath);
+    return Date.now() - stat.mtimeMs < 10 * 60 * 1000;
+  } catch {
+    return false;
+  }
+}
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -21,10 +33,17 @@ export async function GET(request: NextRequest) {
   const days = parseInt(timeframe.replace(/\D/g, ""), 10) || 30;
 
   try {
+    if (!dbIsFresh(DB_PATH)) {
+      try {
+        await collectUsage(DB_PATH);
+      } catch (collectError) {
+        console.error("Failed to collect usage before serving costs:", collectError);
+      }
+    }
+
     const db = getDatabase(DB_PATH);
 
     if (!db) {
-      // Database doesn't exist yet - return zeros
       return NextResponse.json({
         today: 0,
         yesterday: 0,
@@ -36,11 +55,10 @@ export async function GET(request: NextRequest) {
         byModel: [],
         daily: [],
         hourly: [],
-        message: "No usage data collected yet. Run collect-usage script first.",
+        message: "No usage data available yet.",
       });
     }
 
-    // Get all the data
     const summary = getCostSummary(db);
     const byAgent = getCostByAgent(db, days);
     const byModel = getCostByModel(db, days);
@@ -56,6 +74,8 @@ export async function GET(request: NextRequest) {
       byModel,
       daily,
       hourly,
+      source: "openclaw-status+sqlite-cache",
+      collected: true,
     });
   } catch (error) {
     console.error("Error fetching cost data:", error);

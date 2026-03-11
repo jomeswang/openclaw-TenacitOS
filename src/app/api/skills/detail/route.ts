@@ -5,10 +5,16 @@ import { scanAllSkills } from '@/lib/skill-parser';
 
 function countFiles(skillPath: string): { count: number; files: string[] } {
   const files: string[] = [];
+  const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'dist', 'build', 'coverage']);
+  const SKIP_FILES = new Set(['.DS_Store']);
+
   function walk(dir: string, prefix = '') {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
-      if (entry.name.startsWith('.')) continue;
+      if (entry.name.startsWith('.') && entry.name !== '.env.example') continue;
+      if (entry.isDirectory() && SKIP_DIRS.has(entry.name)) continue;
+      if (!entry.isDirectory() && SKIP_FILES.has(entry.name)) continue;
+
       const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(full, rel);
@@ -16,6 +22,13 @@ function countFiles(skillPath: string): { count: number; files: string[] } {
     }
   }
   walk(skillPath);
+
+  files.sort((a, b) => {
+    if (a === 'SKILL.md') return -1;
+    if (b === 'SKILL.md') return 1;
+    return a.localeCompare(b);
+  });
+
   return { count: files.length, files };
 }
 

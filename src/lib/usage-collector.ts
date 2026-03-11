@@ -36,44 +36,39 @@ export interface UsageSnapshot {
 }
 
 /**
- * Get current OpenClaw status with session data
+ * Get current OpenClaw sessions with usage data
  */
-export async function getOpenClawStatus(): Promise<any> {
+export async function getOpenClawSessions(): Promise<any> {
   try {
-    const { stdout } = await execAsync("openclaw status --json");
+    const { stdout } = await execAsync("openclaw sessions --json");
     return JSON.parse(stdout);
   } catch (error) {
-    console.error("Error getting OpenClaw status:", error);
+    console.error("Error getting OpenClaw sessions:", error);
     throw error;
   }
 }
 
 /**
- * Extract session data from status
+ * Extract session data from `openclaw sessions --json`
  */
-export function extractSessionData(status: any): SessionData[] {
+export function extractSessionData(payload: any): SessionData[] {
   const sessions: SessionData[] = [];
+  const rawSessions = Array.isArray(payload?.sessions) ? payload.sessions : [];
 
-  if (!status.sessions?.byAgent) {
-    return sessions;
-  }
-
-  for (const agentGroup of status.sessions.byAgent) {
-    const agentId = agentGroup.agentId;
-
-    for (const session of agentGroup.recent || []) {
-      sessions.push({
-        agentId,
-        sessionKey: session.key,
-        sessionId: session.sessionId,
-        model: normalizeModelId(session.model || "unknown"),
-        inputTokens: session.inputTokens || 0,
-        outputTokens: session.outputTokens || 0,
-        totalTokens: session.totalTokens || 0,
-        updatedAt: session.updatedAt,
-        percentUsed: session.percentUsed || 0,
-      });
-    }
+  for (const session of rawSessions) {
+    const provider = session.modelProvider ? `${session.modelProvider}/` : "";
+    const modelId = normalizeModelId(`${provider}${session.model || "unknown"}`);
+    sessions.push({
+      agentId: session.agentId || 'main',
+      sessionKey: session.key,
+      sessionId: session.sessionId,
+      model: modelId,
+      inputTokens: session.inputTokens || 0,
+      outputTokens: session.outputTokens || 0,
+      totalTokens: session.totalTokens || 0,
+      updatedAt: session.updatedAt || Date.now(),
+      percentUsed: session.percentUsed || 0,
+    });
   }
 
   return sessions;
@@ -198,9 +193,9 @@ export async function collectUsage(dbPath: string): Promise<void> {
   const db = initDatabase(dbPath);
 
   try {
-    // Get current status
-    const status = await getOpenClawStatus();
-    const sessions = extractSessionData(status);
+    // Get current sessions
+    const payload = await getOpenClawSessions();
+    const sessions = extractSessionData(payload);
     const timestamp = Date.now();
     const snapshots = calculateSnapshot(sessions, timestamp);
 

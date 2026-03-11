@@ -10,8 +10,13 @@ import {
   ExternalLink,
   FileText,
   X,
+  ChevronRight,
+  ChevronDown,
+  Folder,
+  File,
 } from "lucide-react";
 import { SectionHeader, MetricCard } from "@/components/TenacitOS";
+import SkillsFileTree from "@/components/SkillsFileTree";
 
 interface Skill {
   id: string;
@@ -589,25 +594,7 @@ function SkillDetailModal({ skill, onClose }: { skill: Skill; onClose: () => voi
               overflow: "auto",
             }}
           >
-            {current.files.length === 0 ? (
-              <div style={{ color: 'var(--text-muted)', fontSize: '12px' }}>No file list available</div>
-            ) : current.files.map((file) => (
-              <div
-                key={file}
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "12px",
-                  color: "var(--text-secondary)",
-                  padding: "4px 0",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                }}
-              >
-                <FileText style={{ width: "14px", height: "14px", color: "var(--text-muted)", flexShrink: 0 }} />
-                {file}
-              </div>
-            ))}
+            <SkillsFileTree files={current.files} />
           </div>
         </div>
 

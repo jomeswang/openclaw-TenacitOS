@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { DollarSign, TrendingUp, TrendingDown, AlertTriangle, Calendar, PieChart } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, PieChart as RePieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { MODEL_PRICING } from "@/lib/pricing";
 
 interface CostData {
   today: number;
@@ -19,11 +20,6 @@ interface CostData {
 
 const COLORS = ['#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#00C7BE', '#30B0C7', '#32ADE6', '#007AFF', '#5856D6', '#AF52DE', '#FF2D55'];
 
-const MODEL_PRICES = {
-  "opus-4.6": { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 },
-  "sonnet-4.5": { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 },
-  "haiku-3.5": { input: 0.8, output: 4, cacheRead: 0.08, cacheWrite: 1.0 },
-};
 
 export default function CostsPage() {
   const [costData, setCostData] = useState<CostData | null>(null);
@@ -328,15 +324,16 @@ export default function CostsPage() {
               </tr>
             </thead>
             <tbody>
-              {Object.entries(MODEL_PRICES).map(([model, prices]) => (
-                <tr key={model} style={{ borderBottom: "1px solid var(--border)" }}>
+              {MODEL_PRICING.map((model) => (
+                <tr key={model.id} style={{ borderBottom: "1px solid var(--border)" }}>
                   <td className="py-3 px-4">
-                    <span className="font-medium" style={{ color: "var(--text-primary)" }}>{model}</span>
+                    <span className="font-medium" style={{ color: "var(--text-primary)" }}>{model.name}</span>
+                    <div className="text-xs" style={{ color: "var(--text-muted)" }}>{model.id}</div>
                   </td>
-                  <td className="py-3 px-4 text-right" style={{ color: "var(--text-primary)" }}>${prices.input}</td>
-                  <td className="py-3 px-4 text-right" style={{ color: "var(--text-primary)" }}>${prices.output}</td>
-                  <td className="py-3 px-4 text-right" style={{ color: "var(--text-secondary)" }}>${prices.cacheRead}</td>
-                  <td className="py-3 px-4 text-right" style={{ color: "var(--text-secondary)" }}>${prices.cacheWrite}</td>
+                  <td className="py-3 px-4 text-right" style={{ color: "var(--text-primary)" }}>${model.inputPricePerMillion}</td>
+                  <td className="py-3 px-4 text-right" style={{ color: "var(--text-primary)" }}>${model.outputPricePerMillion}</td>
+                  <td className="py-3 px-4 text-right" style={{ color: "var(--text-secondary)" }}>—</td>
+                  <td className="py-3 px-4 text-right" style={{ color: "var(--text-secondary)" }}>—</td>
                 </tr>
               ))}
             </tbody>

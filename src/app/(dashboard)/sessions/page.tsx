@@ -15,6 +15,8 @@ import {
   Cpu,
   TrendingUp,
   Hash,
+  Copy,
+  Check,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -86,18 +88,32 @@ function typeColor(type: Session["type"]): string {
 // ─── Message Bubble ──────────────────────────────────────────────────────────
 
 function MessageBubble({ msg }: { msg: Message }) {
+  const COLLAPSE_AT = 1200;
+  const [expanded, setExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
   const isUser = msg.type === "user";
   const isTool = msg.type === "tool_use";
   const isResult = msg.type === "tool_result";
   const isAssistant = msg.type === "assistant";
+  const shouldCollapse = msg.content.length > COLLAPSE_AT;
+  const displayContent = !shouldCollapse || expanded ? msg.content : msg.content.slice(0, COLLAPSE_AT) + "\n…";
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(msg.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      setCopied(false);
+    }
+  };
 
   if (isTool) {
     return (
       <div
         style={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: "0.5rem",
+          position: 'relative',
+          display: "block",
           padding: "0.5rem 0.75rem",
           borderRadius: "0.5rem",
           backgroundColor: "rgba(96,165,250,0.08)",
@@ -107,13 +123,35 @@ function MessageBubble({ msg }: { msg: Message }) {
           fontFamily: "monospace",
         }}
       >
-        <Wrench style={{ width: "13px", height: "13px", color: "#60a5fa", flexShrink: 0, marginTop: "2px" }} />
-        <span style={{ color: "#60a5fa", fontWeight: 600, flexShrink: 0 }}>
-          {msg.toolName}
-        </span>
-        <span style={{ color: "var(--text-muted)", wordBreak: "break-all" }}>
-          {msg.content.replace(`${msg.toolName}(`, "").replace(/\)$/, "").slice(0, 200)}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+          <Wrench style={{ width: "13px", height: "13px", color: "#60a5fa", flexShrink: 0, marginTop: "2px" }} />
+          <span style={{ color: "#60a5fa", fontWeight: 600, flexShrink: 0 }}>
+            {msg.toolName}
+          </span>
+        </div>
+        <div style={{ color: "var(--text-muted)", wordBreak: "break-all", whiteSpace: 'pre-wrap', marginTop: '0.4rem' }}>
+          {displayContent}
+        </div>
+        {shouldCollapse && !expanded && (
+          <div
+            style={{
+              position: 'absolute', left: 0, right: 0, bottom: '2rem', height: '3rem',
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0), rgba(96,165,250,0.05) 35%, rgba(96,165,250,0.12) 100%)',
+              pointerEvents: 'none', borderBottomLeftRadius: '0.5rem', borderBottomRightRadius: '0.5rem',
+            }}
+          />
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem' }}>
+          {shouldCollapse && (
+            <button onClick={() => setExpanded((v) => !v)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 0, fontSize: '0.75rem', fontWeight: 600 }}>
+              {expanded ? '收起' : '展开全文'}
+            </button>
+          )}
+          <button onClick={handleCopy} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'none', border: 'none', color: copied ? '#4ade80' : 'var(--text-muted)', cursor: 'pointer', padding: 0, fontSize: '0.75rem', fontWeight: 600 }}>
+            {copied ? <Check style={{ width: '12px', height: '12px' }} /> : <Copy style={{ width: '12px', height: '12px' }} />}
+            {copied ? '已复制' : '复制全文'}
+          </button>
+        </div>
       </div>
     );
   }
@@ -122,7 +160,8 @@ function MessageBubble({ msg }: { msg: Message }) {
     return (
       <div
         style={{
-          padding: "0.375rem 0.75rem",
+          position: 'relative',
+          padding: "0.5rem 0.75rem",
           borderRadius: "0.375rem",
           backgroundColor: "rgba(34,197,94,0.06)",
           border: "1px solid rgba(34,197,94,0.15)",
@@ -130,13 +169,62 @@ function MessageBubble({ msg }: { msg: Message }) {
           fontSize: "0.75rem",
           color: "var(--text-muted)",
           fontFamily: "monospace",
-          maxHeight: "3rem",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-word",
         }}
       >
-        ↳ {msg.content}
+        ↳ {displayContent}
+        {shouldCollapse && !expanded && (
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: '2rem',
+              height: '3rem',
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0), rgba(22,163,74,0.06) 35%, rgba(22,163,74,0.12) 100%)',
+              pointerEvents: 'none',
+              borderBottomLeftRadius: '0.375rem',
+              borderBottomRightRadius: '0.375rem',
+            }}
+          />
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem' }}>
+          {shouldCollapse && (
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--accent)',
+                cursor: 'pointer',
+                padding: 0,
+                fontSize: '0.75rem',
+                fontWeight: 600,
+              }}
+            >
+              {expanded ? '收起' : '展开全文'}
+            </button>
+          )}
+          <button
+            onClick={handleCopy}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.3rem',
+              background: 'none',
+              border: 'none',
+              color: copied ? '#4ade80' : 'var(--text-muted)',
+              cursor: 'pointer',
+              padding: 0,
+              fontSize: '0.75rem',
+              fontWeight: 600,
+            }}
+          >
+            {copied ? <Check style={{ width: '12px', height: '12px' }} /> : <Copy style={{ width: '12px', height: '12px' }} />}
+            {copied ? '已复制' : '复制全文'}
+          </button>
+        </div>
       </div>
     );
   }
@@ -175,6 +263,7 @@ function MessageBubble({ msg }: { msg: Message }) {
       {/* Bubble */}
       <div
         style={{
+          position: 'relative',
           maxWidth: "78%",
           padding: "0.5rem 0.75rem",
           borderRadius: isUser ? "1rem 1rem 0.25rem 1rem" : "1rem 1rem 1rem 0.25rem",
@@ -189,9 +278,60 @@ function MessageBubble({ msg }: { msg: Message }) {
           whiteSpace: "pre-wrap",
         }}
       >
-        {msg.content.length > 800
-          ? msg.content.slice(0, 800) + "\n…(truncated)"
-          : msg.content}
+        {displayContent}
+        {shouldCollapse && !expanded && (
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: '2rem',
+              height: '3rem',
+              background: isUser
+                ? 'linear-gradient(to bottom, rgba(0,0,0,0), rgba(255,59,48,0.05) 35%, rgba(255,59,48,0.12) 100%)'
+                : 'linear-gradient(to bottom, rgba(0,0,0,0), rgba(30,41,59,0.35) 35%, rgba(30,41,59,0.7) 100%)',
+              pointerEvents: 'none',
+              borderBottomLeftRadius: isUser ? '0.25rem' : '1rem',
+              borderBottomRightRadius: isUser ? '1rem' : '0.25rem',
+            }}
+          />
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem' }}>
+          {shouldCollapse && (
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--accent)',
+                cursor: 'pointer',
+                padding: 0,
+                fontSize: '0.75rem',
+                fontWeight: 600,
+              }}
+            >
+              {expanded ? '收起' : '展开全文'}
+            </button>
+          )}
+          <button
+            onClick={handleCopy}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.3rem',
+              background: 'none',
+              border: 'none',
+              color: copied ? '#4ade80' : 'var(--text-muted)',
+              cursor: 'pointer',
+              padding: 0,
+              fontSize: '0.75rem',
+              fontWeight: 600,
+            }}
+          >
+            {copied ? <Check style={{ width: '12px', height: '12px' }} /> : <Copy style={{ width: '12px', height: '12px' }} />}
+            {copied ? '已复制' : '复制全文'}
+          </button>
+        </div>
       </div>
     </div>
   );
