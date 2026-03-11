@@ -34,7 +34,7 @@ async function pm2Action(name: string, action: string): Promise<string> {
     }
   }
 
-  const { stdout, stderr } = await execAsync(`pm2 ${action} "${name}" 2>&1`);
+  const { stdout, stderr } = await execAsync(`command -v pm2 >/dev/null && pm2 ${action} "${name}" 2>&1 || echo "pm2 not available"`);
   return stdout + (stderr ? `\nSTDERR: ${stderr}` : '');
 }
 
@@ -46,12 +46,14 @@ async function systemdAction(name: string, action: string): Promise<string> {
     throw new Error(`Invalid action "${action}"`);
   }
 
+  const unit = name.endsWith('.service') ? name : `${name}.service`;
+
   if (action === 'logs') {
-    const { stdout } = await execAsync(`journalctl -u "${name}" -n 100 --no-pager 2>&1`);
+    const { stdout } = await execAsync(`journalctl --user -u "${unit}" -n 100 --no-pager 2>&1 || journalctl -u "${unit}" -n 100 --no-pager 2>&1`);
     return stdout;
   }
 
-  const { stdout } = await execAsync(`systemctl ${action} "${name}" 2>&1`);
+  const { stdout } = await execAsync(`systemctl --user ${action} "${unit}" 2>&1 || systemctl ${action} "${unit}" 2>&1`);
   return stdout || `${action} executed successfully`;
 }
 

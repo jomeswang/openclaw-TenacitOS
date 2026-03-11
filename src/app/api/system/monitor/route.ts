@@ -158,8 +158,8 @@ export async function GET() {
 
     // 2. PM2 services — single call, parse JSON
     try {
-      const { stdout: pm2Json } = await execAsync("pm2 jlist 2>/dev/null");
-      const pm2List = JSON.parse(pm2Json) as Array<{
+      const { stdout: pm2Json } = await execAsync("command -v pm2 >/dev/null && pm2 jlist || echo '[]'");
+      const pm2List = JSON.parse(pm2Json || '[]') as Array<{ 
         name: string;
         pid: number | null;
         pm2_env: {

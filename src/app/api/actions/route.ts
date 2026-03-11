@@ -48,11 +48,11 @@ async function runAction(action: string): Promise<ActionResult> {
       }
 
       case 'restart-gateway': {
-        const { stdout, stderr } = await execAsync('systemctl restart openclaw-gateway 2>&1 || echo "Service not found"');
+        const { stdout, stderr } = await execAsync('systemctl --user restart openclaw-gateway.service 2>&1 && openclaw gateway status || echo "Service not found"');
         output = stdout || stderr || 'Restart command executed';
         // Also check status
         try {
-          const { stdout: status } = await execAsync('systemctl is-active openclaw-gateway 2>&1 || echo "unknown"');
+          const { stdout: status } = await execAsync('systemctl --user is-active openclaw-gateway.service 2>&1 || echo "unknown"');
           output += `\nStatus: ${status.trim()}`;
         } catch {}
         break;
@@ -92,8 +92,8 @@ async function runAction(action: string): Promise<ActionResult> {
         }
 
         try {
-          const { stdout: pm2 } = await execAsync('pm2 jlist 2>/dev/null');
-          const pm2list = JSON.parse(pm2);
+          const { stdout: pm2 } = await execAsync('command -v pm2 >/dev/null && pm2 jlist || echo "[]"');
+          const pm2list = JSON.parse(pm2 || '[]');
           for (const svc of pm2services) {
             const proc = pm2list.find((p: { name: string }) => p.name === svc);
             const status = proc?.pm2_env?.status || 'not found';

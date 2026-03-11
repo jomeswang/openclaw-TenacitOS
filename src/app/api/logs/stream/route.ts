@@ -30,9 +30,10 @@ export async function GET(request: NextRequest) {
 
       let cmd: string[];
       if (backend === 'pm2') {
-        cmd = ['pm2', 'logs', service, '--lines', '50', '--nocolor'];
+        cmd = ['bash', '-lc', `command -v pm2 >/dev/null && pm2 logs ${service} --lines 50 --nocolor || echo "pm2 not available"`];
       } else {
-        cmd = ['journalctl', '-u', service, '-n', '50', '--no-pager', '-f'];
+        const unit = service.endsWith('.service') ? service : `${service}.service`;
+        cmd = ['bash', '-lc', `journalctl --user -u ${unit} -n 50 --no-pager -f 2>&1 || journalctl -u ${unit} -n 50 --no-pager -f 2>&1`];
       }
 
       const proc = spawn(cmd[0], cmd.slice(1), { stdio: ['ignore', 'pipe', 'pipe'] });

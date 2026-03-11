@@ -42,8 +42,8 @@ async function checkSystemdService(name: string): Promise<ServiceCheck> {
 
 async function checkPm2Service(name: string): Promise<ServiceCheck> {
   try {
-    const { stdout } = await execAsync('pm2 jlist 2>/dev/null');
-    const list = JSON.parse(stdout);
+    const { stdout } = await execAsync('command -v pm2 >/dev/null && pm2 jlist || echo "[]"');
+    const list = JSON.parse(stdout || '[]');
     const proc = list.find((p: { name: string }) => p.name === name);
     if (!proc) return { name, status: 'unknown', details: 'not found in pm2' };
     const status = proc.pm2_env?.status === 'online' ? 'up' : 'down';

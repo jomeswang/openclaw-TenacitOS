@@ -91,7 +91,15 @@ async function getAgentStatusFromGateway(): Promise<
       return {};
     }
 
-    const sessions = (await response.json()) as AgentSession[];
+    const payload = await response.json() as any;
+    const sessions = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.sessions)
+        ? payload.sessions
+        : Array.isArray(payload?.recent)
+          ? payload.recent
+          : [];
+
     const agentStatus: Record<
       string,
       { isActive: boolean; currentTask: string; lastSeen: number }
@@ -189,7 +197,18 @@ export async function GET() {
     // Try gateway first, fallback to file-based
     const gatewayStatus = await getAgentStatusFromGateway();
 
-    const agents = config.agents.list.map((agent: any) => {
+    const configuredAgents = Array.isArray(config?.agents?.list)
+      ? config.agents.list
+      : [
+          {
+            id: 'main',
+            name: 'main',
+            workspace: config?.agents?.defaults?.workspace || '/root/.openclaw/workspace',
+            model: { primary: config?.agents?.defaults?.model?.primary || 'unknown' },
+          },
+        ];
+
+    const agents = configuredAgents.map((agent: any) => {
       const agentInfo = AGENT_CONFIG[agent.id as keyof typeof AGENT_CONFIG] || {
         emoji: "🤖",
         color: "#666",
