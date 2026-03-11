@@ -19,6 +19,7 @@ A real-time dashboard and control center for [OpenClaw](https://openclaw.ai) AI 
 - **🔔 Notifications** — Real-time notification center with unread badge
 - **🏢 Office 3D** — Interactive 3D office with one desk per agent (React Three Fiber)
 - **📺 Terminal** — Read-only terminal for safe status commands
+- **🧠 Model Switcher** — Dedicated Models tab to switch active OpenClaw default model and optionally restart Gateway
 - **🔐 Auth** — Password-protected with rate limiting and secure cookie
 
 ---
@@ -231,6 +232,8 @@ Agents are auto-discovered from `openclaw.json` at startup. The `/api/agents` en
 }
 ```
 
+If your config only has `agents.defaults` (without `agents.list`), TenacitOS gracefully falls back to `main` instead of failing.
+
 Each agent can define its own visual appearance in `openclaw.json`:
 
 ```json
@@ -243,6 +246,22 @@ Each agent can define its own visual appearance in `openclaw.json`:
   }
 }
 ```
+
+### Models tab — switch active model + restart Gateway
+
+TenacitOS includes a dedicated **Models** tab (`/models`) for runtime model selection.
+
+What it does:
+- Reads available model options from `~/.openclaw/openclaw.json`
+- Displays current default model (`agents.defaults.model.primary`)
+- Lets you select and save a new default model
+- Supports **Save and Restart Gateway** for immediate effect
+
+Implementation endpoints:
+- `GET /api/model-config` → returns `{ currentModel, options }`
+- `POST /api/model-config` → updates config and optionally restarts gateway
+
+> Restart uses user-level service by default: `systemctl --user restart openclaw-gateway.service`.
 
 ### Office 3D — agent positions
 
