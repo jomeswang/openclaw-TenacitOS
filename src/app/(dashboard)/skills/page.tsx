@@ -425,6 +425,30 @@ function SkillCard({ skill, onClick }: { skill: Skill; onClick: () => void }) {
 
 // Skill Detail Modal Component
 function SkillDetailModal({ skill, onClose }: { skill: Skill; onClose: () => void }) {
+  const [detail, setDetail] = useState<Skill | null>(skill);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    fetch(`/api/skills/detail?id=${encodeURIComponent(skill.id)}`)
+      .then((res) => res.ok ? res.json() : skill)
+      .then((json) => {
+        if (mounted) setDetail(json);
+      })
+      .catch(() => {
+        if (mounted) setDetail(skill);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [skill]);
+
+  const current = detail || skill;
+
   return (
     <div
       style={{
@@ -488,7 +512,7 @@ function SkillDetailModal({ skill, onClose }: { skill: Skill; onClose: () => voi
                   marginBottom: "8px",
                 }}
               >
-                {skill.name}
+                {current.name}
               </h2>
               <p
                 style={{
@@ -498,12 +522,12 @@ function SkillDetailModal({ skill, onClose }: { skill: Skill; onClose: () => voi
                   marginBottom: "12px",
                 }}
               >
-                {skill.description}
+                {current.description}
               </p>
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                <div className="badge-positive">{skill.source}</div>
-                <div className="badge-info">{skill.fileCount} archivos</div>
-                {skill.agents && skill.agents.length > 0 && skill.agents.map((agent) => (
+                <div className="badge-positive">{current.source}</div>
+                <div className="badge-info">{current.fileCount} archivos</div>
+                {current.agents && current.agents.length > 0 && current.agents.map((agent) => (
                   <div
                     key={agent}
                     style={{
@@ -520,9 +544,9 @@ function SkillDetailModal({ skill, onClose }: { skill: Skill; onClose: () => voi
                     @{agent}
                   </div>
                 ))}
-                {skill.homepage && (
+                {current.homepage && (
                   <a
-                    href={skill.homepage}
+                    href={current.homepage}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
@@ -554,7 +578,7 @@ function SkillDetailModal({ skill, onClose }: { skill: Skill; onClose: () => voi
               marginBottom: "12px",
             }}
           >
-            Archivos ({skill.files.length})
+            Archivos ({current.files.length}) {loading && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>· cargando...</span>}
           </h3>
           <div
             style={{
@@ -565,7 +589,9 @@ function SkillDetailModal({ skill, onClose }: { skill: Skill; onClose: () => voi
               overflow: "auto",
             }}
           >
-            {skill.files.map((file) => (
+            {current.files.length === 0 ? (
+              <div style={{ color: 'var(--text-muted)', fontSize: '12px' }}>No file list available</div>
+            ) : current.files.map((file) => (
               <div
                 key={file}
                 style={{
@@ -582,6 +608,36 @@ function SkillDetailModal({ skill, onClose }: { skill: Skill; onClose: () => voi
                 {file}
               </div>
             ))}
+          </div>
+        </div>
+
+        <div style={{ padding: '0 24px 24px' }}>
+          <h3
+            style={{
+              fontFamily: 'var(--font-heading)',
+              fontSize: '14px',
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+              marginBottom: '12px',
+            }}
+          >
+            SKILL.md
+          </h3>
+          <div
+            style={{
+              backgroundColor: 'var(--bg)',
+              borderRadius: '8px',
+              padding: '16px',
+              maxHeight: '320px',
+              overflow: 'auto',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '12px',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            {current.fullContent || 'No SKILL.md content loaded'}
           </div>
         </div>
       </div>
