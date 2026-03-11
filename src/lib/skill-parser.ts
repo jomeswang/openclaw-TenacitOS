@@ -38,8 +38,39 @@ interface SkillsConfig {
 }
 
 const CONFIG_PATH = path.join(process.cwd(), 'data', 'configured-skills.json');
+const OPENCLAW_DIR = process.env.OPENCLAW_DIR || '/root/.openclaw';
 const DEFAULT_SYSTEM_PATH = '/usr/lib/node_modules/openclaw/skills';
-const DEFAULT_WORKSPACE_PATH = (process.env.OPENCLAW_DIR || '/root/.openclaw') + '/workspace-infra/skills';
+const DEFAULT_WORKSPACE_PATH = path.join(OPENCLAW_DIR, 'workspace', 'skills');
+
+function resolveSystemSkillsPath(configuredPath?: string): string {
+  const candidates = [
+    configuredPath,
+    process.env.OPENCLAW_SYSTEM_SKILLS_PATH,
+    DEFAULT_SYSTEM_PATH,
+    '/root/.local/share/pnpm/global/5/.pnpm/openclaw@2026.3.7_@napi-rs+canvas@0.1.96_@types+express@5.0.6_hono@4.12.5_node-llama-cpp@3.16.2/node_modules/openclaw/skills',
+  ].filter(Boolean) as string[];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+
+  return configuredPath || DEFAULT_SYSTEM_PATH;
+}
+
+function resolveWorkspaceSkillsPath(configuredPath?: string): string {
+  const candidates = [
+    configuredPath,
+    process.env.OPENCLAW_WORKSPACE_SKILLS_PATH,
+    path.join(OPENCLAW_DIR, 'workspace', 'skills'),
+    path.join(OPENCLAW_DIR, 'workspace-infra', 'skills'),
+  ].filter(Boolean) as string[];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+
+  return configuredPath || DEFAULT_WORKSPACE_PATH;
+}
 
 /**
  * Parse SKILL.md front matter (YAML between --- delimiters)
@@ -175,7 +206,7 @@ export function parseSkill(skillPath: string, skillName: string, agents: string[
  */
 function buildAgentSkillMap(): Map<string, string[]> {
   const map = new Map<string, string[]>();
-  const openclawDir = process.env.OPENCLAW_DIR || '/root/.openclaw';
+  const openclawDir = OPENCLAW_DIR;
 
   // Agent workspaces: workspace, workspace-infra, workspace-social, etc.
   // Read from openclaw.json if possible
@@ -240,8 +271,8 @@ export function scanAllSkills(): SkillInfo[] {
     const content = fs.readFileSync(CONFIG_PATH, 'utf-8');
     const config: SkillsConfig = JSON.parse(content);
     
-    const systemPath = config.systemSkillsPath || DEFAULT_SYSTEM_PATH;
-    const workspacePath = config.workspaceSkillsPath || DEFAULT_WORKSPACE_PATH;
+    const systemPath = resolveSystemSkillsPath(config.systemSkillsPath);
+    const workspacePath = resolveWorkspaceSkillsPath(config.workspaceSkillsPath);
 
     // Build agent->skills map for workspace skills
     const agentSkillMap = buildAgentSkillMap();

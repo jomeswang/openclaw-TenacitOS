@@ -1,0 +1,6 @@
+{
+  "lastUpdated": "2026-03-11",
+  "skills": [
+    {"name": "weather", "location": "system", "description": "Get current weather and forecasts"}
+  ]
+}
