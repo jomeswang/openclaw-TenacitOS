@@ -27,8 +27,8 @@ function LoginForm() {
 
       if (data.success) {
         const redirectTo = searchParams.get("redirect") || searchParams.get("from") || "/";
-        router.push(redirectTo);
-        router.refresh();
+        window.location.assign(redirectTo);
+        return;
       } else {
         setError("Contraseña incorrecta");
       }
