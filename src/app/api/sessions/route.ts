@@ -270,7 +270,7 @@ async function getSessionMessages(sessionId: string): Promise<NextResponse> {
                 id: (obj.id || '') + '-result',
                 type: 'tool_result',
                 role,
-                content: resultContent.slice(0, 500),
+                content: resultContent,
                 timestamp,
                 model: currentModel || undefined,
               });

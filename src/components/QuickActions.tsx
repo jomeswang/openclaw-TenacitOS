@@ -39,8 +39,22 @@ export function QuickActions({ onActionComplete }: QuickActionsProps) {
   };
 
   const handleRestartGateway = async () => {
-    // Placeholder - would call openclaw gateway restart
-    showNotification("success", "Gateway restart command sent (placeholder)");
+    setLoadingAction("restart");
+    try {
+      const res = await fetch("/api/actions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "restart-gateway" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to restart gateway");
+      showNotification("success", "Gateway restarted successfully");
+      onActionComplete?.();
+    } catch {
+      showNotification("error", "Failed to restart gateway");
+    } finally {
+      setLoadingAction(null);
+    }
   };
 
   const handleClearActivityLog = async () => {
@@ -64,8 +78,7 @@ export function QuickActions({ onActionComplete }: QuickActionsProps) {
   };
 
   const handleViewLogs = async () => {
-    // Placeholder - would open gateway logs
-    showNotification("success", "Opening gateway logs... (placeholder)");
+    window.location.href = "/logs";
   };
 
   const actions: ActionButton[] = [
@@ -75,7 +88,6 @@ export function QuickActions({ onActionComplete }: QuickActionsProps) {
       icon: RefreshCw,
       color: "blue",
       action: handleRestartGateway,
-      placeholder: true,
     },
     {
       id: "clear_log",
@@ -90,7 +102,6 @@ export function QuickActions({ onActionComplete }: QuickActionsProps) {
       icon: FileText,
       color: "emerald",
       action: handleViewLogs,
-      placeholder: true,
     },
     {
       id: "change_password",

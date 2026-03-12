@@ -7,10 +7,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { logActivity } from '@/lib/activities-db';
+import { DEFAULT_WORKSPACE_PATH, OPENCLAW_GATEWAY_SERVICE, PM2_LOG_DIR, PM2_SERVICES, SYSTEMD_SERVICES, APP_REPO_PATH } from '@/lib/runtime-config';
 
 const execAsync = promisify(exec);
 
-const WORKSPACE = process.env.OPENCLAW_DIR ? `${process.env.OPENCLAW_DIR}/workspace` : '/root/.openclaw/workspace';
+const WORKSPACE = DEFAULT_WORKSPACE_PATH;
 
 interface ActionResult {
   action: string;
@@ -48,11 +49,11 @@ async function runAction(action: string): Promise<ActionResult> {
       }
 
       case 'restart-gateway': {
-        const { stdout, stderr } = await execAsync('systemctl --user restart openclaw-gateway.service 2>&1 && openclaw gateway status || echo "Service not found"');
+        const { stdout, stderr } = await execAsync(`systemctl --user restart ${OPENCLAW_GATEWAY_SERVICE}.service 2>&1 && openclaw gateway status || echo "Service not found"`);
         output = stdout || stderr || 'Restart command executed';
         // Also check status
         try {
-          const { stdout: status } = await execAsync('systemctl --user is-active openclaw-gateway.service 2>&1 || echo "unknown"');
+          const { stdout: status } = await execAsync(`systemctl --user is-active ${OPENCLAW_GATEWAY_SERVICE}.service 2>&1 || echo "unknown"`);
           output += `\nStatus: ${status.trim()}`;
         } catch {}
         break;
@@ -62,7 +63,7 @@ async function runAction(action: string): Promise<ActionResult> {
         const commands = [
           'find /tmp -maxdepth 1 -type f -mtime +1 -delete 2>/dev/null; echo "Cleaned /tmp"',
           `find "${WORKSPACE}" -name "*.tmp" -o -name "*.bak" | head -20 | xargs rm -f 2>/dev/null; echo "Cleaned tmp/bak files"`,
-          'find /root/.pm2/logs -name "*.log" -size +50M -exec truncate -s 10M {} \\; 2>/dev/null; echo "Trimmed large PM2 logs"',
+          `find ${PM2_LOG_DIR} -name "*.log" -size +50M -exec truncate -s 10M {} \\; 2>/dev/null; echo "Trimmed large PM2 logs"`,
         ];
         const results = await Promise.all(commands.map((cmd) => execAsync(cmd).then((r) => r.stdout).catch((e) => e.message)));
         output = results.join('\n');
@@ -81,12 +82,12 @@ async function runAction(action: string): Promise<ActionResult> {
 
       case 'heartbeat': {
         // Check all critical services
-        const services = ['mission-control'];
-        const pm2services = ['classvault', 'content-vault', 'brain'];
+        const services = SYSTEMD_SERVICES.filter((s) => s !== OPENCLAW_GATEWAY_SERVICE && s !== 'nginx');
+        const pm2services = PM2_SERVICES;
         const results: string[] = [];
 
         for (const svc of services) {
-          const { stdout } = await execAsync(`systemctl is-active ${svc} 2>/dev/null || echo "inactive"`);
+          const { stdout } = await execAsync(`systemctl --user is-active ${svc}.service 2>/dev/null || systemctl is-active ${svc}.service 2>/dev/null || echo "inactive"`);
           const status = stdout.trim();
           results.push(`${status === 'active' ? '✅' : '❌'} ${svc}: ${status}`);
         }
@@ -116,7 +117,7 @@ async function runAction(action: string): Promise<ActionResult> {
       }
 
       case 'npm-audit': {
-        const { stdout, stderr } = await execAsync(`cd "${WORKSPACE}/mission-control" && npm audit --json 2>/dev/null | node -e "const d=require('fs').readFileSync('/dev/stdin','utf-8');const j=JSON.parse(d);console.log('Vulnerabilities: '+JSON.stringify(j.metadata?.vulnerabilities||{}))" 2>&1`).catch((e) => ({ stdout: '', stderr: e.message }));
+        const { stdout, stderr } = await execAsync(`cd "${APP_REPO_PATH}" && npm audit --json 2>/dev/null | node -e "const d=require('fs').readFileSync('/dev/stdin','utf-8');const j=JSON.parse(d);console.log('Vulnerabilities: '+JSON.stringify(j.metadata?.vulnerabilities||{}))" 2>&1`).catch((e) => ({ stdout: '', stderr: e.message }));
         output = stdout || stderr || 'Audit completed';
         break;
       }

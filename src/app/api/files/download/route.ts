@@ -3,11 +3,12 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { logActivity } from '@/lib/activities-db';
 
-const OPENCLAW_DIR = process.env.OPENCLAW_DIR || '/root/.openclaw';
+import { APP_REPO_NAME, APP_REPO_PATH, DEFAULT_WORKSPACE_PATH } from '@/lib/runtime-config';
 
 const WORKSPACE_MAP: Record<string, string> = {
-  workspace: path.join(OPENCLAW_DIR, 'workspace'),
-  'mission-control': path.join(OPENCLAW_DIR, 'workspace', 'mission-control'),
+  workspace: DEFAULT_WORKSPACE_PATH,
+  [APP_REPO_NAME]: APP_REPO_PATH,
+  tenacitos: APP_REPO_PATH,
 };
 
 function getMimeType(filename: string): string {

@@ -16,13 +16,12 @@ const QUICK_COMMANDS = [
   "free -h",
   "uptime",
   "ps aux | grep node",
-  "systemctl status mission-control",
-  "pm2 list",
+  "systemctl --user status tenacitos.service",
+  "openclaw gateway status",
   "ls /root/.openclaw/workspace",
-  "git -C /root/.openclaw/workspace/mission-control status",
-  "journalctl -u mission-control -n 20 --no-pager",
-  "docker ps",
-  "netstat -tlnp",
+  "git -C /root/.openclaw/workspace/work/tenacitOS status",
+  "journalctl --user -u tenacitos.service -n 20 --no-pager",
+  "ss -ltnp",
   "cat /proc/loadavg",
 ];
 

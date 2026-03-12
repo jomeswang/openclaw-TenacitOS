@@ -9,8 +9,10 @@ import { promisify } from 'util';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+import { APP_REPO_PATH, DEFAULT_WORKSPACE_PATH } from '@/lib/runtime-config';
+
 const execAsync = promisify(exec);
-const WORKSPACE = process.env.OPENCLAW_DIR ? `${process.env.OPENCLAW_DIR}/workspace` : '/root/.openclaw/workspace';
+const WORKSPACE = DEFAULT_WORKSPACE_PATH;
 
 interface RepoStatus {
   name: string;
@@ -124,7 +126,7 @@ export async function GET() {
   }
 }
 
-const ALLOWED_REPOS = [WORKSPACE + '/mission-control', WORKSPACE];
+const ALLOWED_REPOS = [APP_REPO_PATH, WORKSPACE];
 
 export async function POST(request: NextRequest) {
   try {

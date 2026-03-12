@@ -2,16 +2,12 @@ import { NextResponse } from "next/server";
 import { exec } from "child_process";
 import { promisify } from "util";
 import os from "os";
+import { APP_REPO_NAME, OPENCLAW_GATEWAY_SERVICE, PM2_SERVICES, SYSTEMD_SERVICES } from '@/lib/runtime-config';
 
 const execAsync = promisify(exec);
 
 // Services monitored per backend
-const SYSTEMD_SERVICES = ["mission-control"];
-const PM2_SERVICES = ["classvault", "content-vault", "postiz-simple", "brain"];
-// creatoros not deployed yet — shown as "not_deployed"
-const PLACEHOLDER_SERVICES = [
-  { name: "creatoros", description: "Creatoros Platform", status: "not_deployed" },
-];
+const PLACEHOLDER_SERVICES: Array<{ name: string; description: string; status: string }> = [];
 
 interface ServiceEntry {
   name: string;
@@ -60,12 +56,8 @@ function normalizePm2Status(status: string): string {
 
 // Friendly display names for PM2 process names
 const SERVICE_DESCRIPTIONS: Record<string, string> = {
-  "mission-control": "Mission Control – Tenacitas Dashboard",
-  classvault: "ClassVault – LMS Platform",
-  "content-vault": "Content Vault – Draft Management Webapp",
-  "postiz-simple": "Postiz – Social Media Scheduler",
-  brain: "Brain – Internal Tools",
-  creatoros: "Creatoros Platform",
+  [APP_REPO_NAME]: `${APP_REPO_NAME} – OpenClaw Dashboard`,
+  [OPENCLAW_GATEWAY_SERVICE]: 'OpenClaw Gateway',
 };
 
 export async function GET() {
@@ -138,7 +130,7 @@ export async function GET() {
     // 1. Systemd services
     for (const name of SYSTEMD_SERVICES) {
       try {
-        const { stdout } = await execAsync(`systemctl is-active ${name} 2>/dev/null || true`);
+        const { stdout } = await execAsync(`systemctl --user is-active ${name}.service 2>/dev/null || systemctl is-active ${name}.service 2>/dev/null || true`);
         const rawStatus = stdout.trim(); // "active" | "inactive" | "failed" | ...
         services.push({
           name,

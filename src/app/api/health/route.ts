@@ -5,6 +5,7 @@
 import { NextResponse } from 'next/server';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { APP_REPO_NAME, OPENCLAW_GATEWAY_SERVICE, PM2_SERVICES, SYSTEMD_SERVICES } from '@/lib/runtime-config';
 
 const execAsync = promisify(exec);
 
@@ -32,7 +33,7 @@ async function checkUrl(url: string, timeoutMs = 5000): Promise<{ status: 'up' |
 
 async function checkSystemdService(name: string): Promise<ServiceCheck> {
   try {
-    const { stdout } = await execAsync(`systemctl is-active ${name} 2>/dev/null`);
+    const { stdout } = await execAsync(`systemctl --user is-active ${name}.service 2>/dev/null || systemctl is-active ${name}.service 2>/dev/null || true`);
     const active = stdout.trim() === 'active';
     return { name, status: active ? 'up' : 'down', details: stdout.trim() };
   } catch {
@@ -57,16 +58,15 @@ export async function GET() {
   const checks: ServiceCheck[] = [];
 
   // Internal services
-  const [missionControl, gateway] = await Promise.all([
-    checkSystemdService('mission-control'),
-    checkSystemdService('openclaw-gateway'),
+  const [appService, gateway] = await Promise.all([
+    checkSystemdService(APP_REPO_NAME),
+    checkSystemdService(OPENCLAW_GATEWAY_SERVICE),
   ]);
-  checks.push({ ...missionControl, name: 'Mission Control' });
+  checks.push({ ...appService, name: APP_REPO_NAME });
   checks.push({ ...gateway, name: 'OpenClaw Gateway' });
 
   // PM2 services
-  const pm2Services = ['classvault', 'content-vault', 'brain'];
-  const pm2Checks = await Promise.all(pm2Services.map(checkPm2Service));
+  const pm2Checks = await Promise.all(PM2_SERVICES.map(checkPm2Service));
   checks.push(...pm2Checks);
 
   // External URLs

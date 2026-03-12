@@ -19,21 +19,48 @@ import WallClock from './WallClock';
 import FirstPersonControls from './FirstPersonControls';
 import MovingAvatar from './MovingAvatar';
 
-export default function Office3D() {
+interface ExternalOfficeAgent {
+  id: string;
+  name: string;
+  emoji?: string;
+  role?: string;
+  color?: string;
+  currentTask?: string;
+  isActive?: boolean;
+}
+
+export default function Office3D({ externalAgents = [] }: { externalAgents?: ExternalOfficeAgent[] }) {
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [interactionModal, setInteractionModal] = useState<string | null>(null);
   const [controlMode, setControlMode] = useState<'orbit' | 'fps'>('orbit');
   const [avatarPositions, setAvatarPositions] = useState<Map<string, any>>(new Map());
   
-  // Mock data - TODO: Replace with real API data
-  const [agentStates] = useState<Record<string, AgentState>>({
-    main: { id: 'main', status: 'working', currentTask: 'Procesando emails', model: 'opus', tokensPerHour: 15000, tasksInQueue: 3, uptime: 12 },
-    academic: { id: 'academic', status: 'idle', model: 'sonnet', tokensPerHour: 0, tasksInQueue: 0, uptime: 8 },
-    studio: { id: 'studio', status: 'thinking', currentTask: 'Generando guión YouTube', model: 'opus', tokensPerHour: 8000, tasksInQueue: 1, uptime: 5 },
-    linkedin: { id: 'linkedin', status: 'working', currentTask: 'Redactando post', model: 'sonnet', tokensPerHour: 5000, tasksInQueue: 2, uptime: 10 },
-    social: { id: 'social', status: 'idle', model: 'sonnet', tokensPerHour: 0, tasksInQueue: 0, uptime: 7 },
-    infra: { id: 'infra', status: 'error', currentTask: 'Failed deployment', model: 'haiku', tokensPerHour: 1000, tasksInQueue: 0, uptime: 15 },
+  const officeAgents = AGENTS.map((agent, index) => {
+    const live = externalAgents.find((item) => item.id === agent.id) || externalAgents[index];
+    return {
+      ...agent,
+      name: live?.name || agent.name,
+      emoji: live?.emoji || agent.emoji,
+      role: live?.role || agent.role,
+      color: live?.color || agent.color,
+    };
   });
+
+  const [agentStates] = useState<Record<string, AgentState>>(
+    officeAgents.reduce((acc, agent) => {
+      const live = externalAgents.find((item) => item.id === agent.id);
+      acc[agent.id] = {
+        id: agent.id,
+        status: live?.isActive ? 'working' : 'idle',
+        currentTask: live?.currentTask || 'Waiting for work',
+        model: 'default',
+        tokensPerHour: live?.isActive ? 1000 : 0,
+        tasksInQueue: live?.isActive ? 1 : 0,
+        uptime: 1,
+      };
+      return acc;
+    }, {} as Record<string, AgentState>)
+  );
 
   const handleDeskClick = (agentId: string) => {
     setSelectedAgent(agentId);
@@ -66,7 +93,7 @@ export default function Office3D() {
   // Definir obstáculos (muebles)
   const obstacles = [
     // Escritorios (6)
-    ...AGENTS.map(agent => ({
+    ...officeAgents.map(agent => ({
       position: new Vector3(agent.position[0], 0, agent.position[2]),
       radius: 1.5
     })),
@@ -111,7 +138,7 @@ export default function Office3D() {
           <Walls />
 
           {/* Escritorios de agentes (sin avatares) */}
-          {AGENTS.map((agent) => (
+          {officeAgents.map((agent) => (
             <AgentDesk
               key={agent.id}
               agent={agent}
@@ -122,7 +149,7 @@ export default function Office3D() {
           ))}
 
           {/* Avatares móviles */}
-          {AGENTS.map((agent) => (
+          {officeAgents.map((agent) => (
             <MovingAvatar
               key={`avatar-${agent.id}`}
               agent={agent}
@@ -175,10 +202,10 @@ export default function Office3D() {
       </Canvas>
 
       {/* Panel lateral cuando se selecciona un agente */}
-      {selectedAgent && (
+      {selectedAgent && officeAgents.length > 0 && (
         <AgentPanel
-          agent={AGENTS.find(a => a.id === selectedAgent)!}
-          state={agentStates[selectedAgent]}
+          agent={officeAgents.find(a => a.id === selectedAgent) || officeAgents[0]}
+          state={agentStates[selectedAgent] || agentStates[officeAgents[0]?.id || 'main']}
           onClose={handleClosePanel}
         />
       )}
