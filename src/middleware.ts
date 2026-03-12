@@ -15,9 +15,24 @@ function isAuthenticated(request: NextRequest): boolean {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // TEMP: auth disabled for debugging/login bypass
-  // Allow everything through.
-  return NextResponse.next();
+  const isPublicRoute = PUBLIC_ROUTES.has(pathname);
+  const isPublicApi = PUBLIC_API_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+
+  if (isPublicRoute || isPublicApi) {
+    return NextResponse.next();
+  }
+
+  if (isAuthenticated(request)) {
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const loginUrl = new URL("/login", request.url);
+  loginUrl.searchParams.set("redirect", pathname);
+  return NextResponse.redirect(loginUrl);
 }
 
 export const config = {
