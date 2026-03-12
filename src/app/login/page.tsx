@@ -26,8 +26,8 @@ function LoginForm() {
       const data = await res.json();
 
       if (data.success) {
-        const from = searchParams.get("from") || "/";
-        router.push(from);
+        const redirectTo = searchParams.get("redirect") || searchParams.get("from") || "/";
+        router.push(redirectTo);
         router.refresh();
       } else {
         setError("Contraseña incorrecta");
